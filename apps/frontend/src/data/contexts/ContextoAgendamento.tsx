@@ -1,7 +1,6 @@
 "use client"
 
-import { createContext, useState } from "react"
-import UseAPI from "../hooks/useAPI"
+import { createContext, useCallback, useEffect, useState } from "react"
 import useSessao from "../hooks/useSessao"
 import {
     AgendaUtils,
@@ -10,31 +9,37 @@ import {
     Servico,
 } from "@barbabrutal/core"
 import { useRouter } from "next/navigation"
+import useAPI from "../hooks/useAPI"
 
 export interface ContextoAgendamentoProps {
     profissional: Profissional | null
     servicos: Servico[]
     data: Date | null
     dataValida: Date | null
-    agendar: () => Promise<void>
-    selecionarServicos: (servicos: Servico[]) => void
+    horariosOcupados: string[]
     selecionarProfissional: (profissional: Profissional | null) => void
-    selecionarData: (data: Date | null) => void
+    selecionarServicos: (servicos: Servico[]) => void
+    selecionarData: (data: Date) => void
+    agendar: () => Promise<void>
     podeAgendar: () => boolean
     duracaoTotal: () => string
     precoTotal: () => number
+    qtdeHorarios: () => number
 }
 
 const ContextoAgendamento = createContext<ContextoAgendamentoProps>({} as any)
 
 export function ProvedorAgendamento(props: any) {
-    const { httpPost } = UseAPI()
+    const { httpPost, httpGet } = useAPI()
     const { usuario } = useSessao()
     const router = useRouter()
 
+    const [horariosOcupados, setHorariosOcupados] = useState<string[]>([])
     const [profissional, setProfissional] = useState<Profissional | null>(null)
     const [servicos, setServicos] = useState<Servico[]>([])
-    const [data, setData] = useState<Date | null>(null)
+    const [data, setData] = useState<Date>(DateUtils.hojeComHoraZerada())
+
+    const dia = data.toISOString().slice(0, 10) ?? ""
 
     function podeAgendar(): boolean {
         if (!profissional) return false
@@ -45,6 +50,10 @@ export function ProvedorAgendamento(props: any) {
 
     function duracaoTotal() {
         return AgendaUtils.duracaoTotal(servicos)
+    }
+
+    function qtdeHorarios() {
+        return servicos.reduce((qtde, servico) => qtde + servico.qtdeSlots, 0)
     }
 
     async function agendar() {
@@ -69,6 +78,25 @@ export function ProvedorAgendamento(props: any) {
         return servicos.reduce((acc, servico) => acc + servico.preco, 0)
     }
 
+    const obterHorariosOcupados = useCallback(
+        async function (
+            dia: string,
+            profissional: Profissional
+        ): Promise<string[]> {
+            if (!dia || !profissional) return []
+            const ocupacao = await httpGet(
+                `agendamentos/ocupacao/${profissional!.id}/${dia}`
+            )
+            return ocupacao ?? []
+        },
+        [httpGet]
+    )
+
+    useEffect(() => {
+        if (!dia || !profissional) return
+        obterHorariosOcupados(dia, profissional).then(setHorariosOcupados)
+    }, [dia, profissional, obterHorariosOcupados])
+
     return (
         <ContextoAgendamento.Provider
             value={{
@@ -80,6 +108,7 @@ export function ProvedorAgendamento(props: any) {
                     if (data.getHours() < 8 || data.getHours() > 20) return null
                     return data
                 },
+                horariosOcupados,
                 selecionarProfissional: setProfissional,
                 selecionarServicos: setServicos,
                 selecionarData: setData,
@@ -87,6 +116,7 @@ export function ProvedorAgendamento(props: any) {
                 podeAgendar,
                 duracaoTotal,
                 precoTotal,
+                qtdeHorarios,
             }}
         >
             {props.children}

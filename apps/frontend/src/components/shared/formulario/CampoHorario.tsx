@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { AgendaUtils, DateUtils } from "@barbabrutal/core"
+import { AgendaUtils, DateUtils, Horarios } from "@barbabrutal/core"
 import { IconX } from "@tabler/icons-react"
 import { useState } from "react"
 
@@ -10,49 +10,40 @@ export interface CampoHorarioProps
         React.SelectHTMLAttributes<HTMLInputElement>,
         "value" | "onChange"
     > {
-    value: Date
     label?: string
+    value: Date
     qtdeHorarios: number
+    horariosOcupados: string[]
     onChange: (value: Date) => void
 }
 
 export default function CampoHorario(props: CampoHorarioProps) {
     const [horarioHover, setHorarioHover] = useState<string | null>(null)
     const { manha, tardeNoite } = AgendaUtils.horariosDoDia()
+    const { horariosOcupados } = props
 
     const horarioSelecionado = props.value.toLocaleTimeString("pt-BR", {
         hour: "2-digit",
         minute: "2-digit",
     })
 
-    function obterIntervaloDeHorarios(horario: string | null, qtde: number) {
-        if (!horario) return []
-
-        const horarios = manha.includes(horario) ? manha : tardeNoite
-        const indice = horarios.indexOf(horario)
-
-        return horarios.slice(indice, indice + qtde)
-    }
-
     function renderizarHorario(horario: string) {
-        const intervaloHover = obterIntervaloDeHorarios(
-            horarioHover,
-            props.qtdeHorarios
+        const horariosHover = new Horarios(
+            horarioHover!,
+            props.qtdeHorarios,
+            horariosOcupados
         )
-        const destaque = intervaloHover.includes(horario)
-        const horariosSuficientes = intervaloHover.length === props.qtdeHorarios
-        const naoSelecionavel =
-            horarioHover &&
-            !horariosSuficientes &&
-            intervaloHover.includes(horario)
-
-        const intervaloSelecionado = obterIntervaloDeHorarios(
+        const horariosSelecionados = new Horarios(
             horarioSelecionado,
-            props.qtdeHorarios
+            props.qtdeHorarios,
+            horariosOcupados
         )
         const selecionado =
-            intervaloSelecionado.length == props.qtdeHorarios &&
-            intervaloSelecionado.includes(horario)
+            horariosSelecionados.todos.includes(horario) &&
+            horariosSelecionados.completo
+        const destaque = horariosHover.todos.includes(horario)
+        const naoPodeSelecionar =
+            destaque && (horariosHover.ocupado || horariosHover.incompleto)
 
         return (
             <div
@@ -62,19 +53,23 @@ export default function CampoHorario(props: CampoHorarioProps) {
                         "bg-green-500 text-white font-semibold": selecionado,
                         "bg-yellow-400 text-black font-semibold": destaque,
                         "bg-red-500 text-white font-semibold cursor-not-allowed":
-                            naoSelecionavel,
+                            naoPodeSelecionar,
                     }
                 )}
                 onMouseEnter={() => setHorarioHover(horario)}
                 onMouseLeave={() => setHorarioHover(null)}
                 onClick={() => {
-                    if (naoSelecionavel) return
+                    if (naoPodeSelecionar) return
                     props.onChange(
                         DateUtils.aplicarHorario(props.value, horario)
                     )
                 }}
             >
-                {naoSelecionavel ? <IconX size={18} /> : <span>{horario}</span>}
+                {horariosOcupados.includes(horario) ? (
+                    <IconX size={18} />
+                ) : (
+                    <span>{horario}</span>
+                )}
             </div>
         )
     }
@@ -93,8 +88,9 @@ export default function CampoHorario(props: CampoHorarioProps) {
                 <div className="grid grid-cols-8 gap-1">
                     {manha.map(renderizarHorario)}
                 </div>
+
                 <span className="uppercase text-zinc-400 font-light">
-                    Tarde e Noite
+                    Tarde & Noite
                 </span>
                 <div className="grid grid-cols-8 gap-1">
                     {tardeNoite.map(renderizarHorario)}

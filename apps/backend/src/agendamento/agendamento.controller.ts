@@ -4,6 +4,7 @@ import {
   BuscarAgendaProfissionalPorDia,
   ExcluirAgendamento,
   NovoAgendamento,
+  ObterHorariosOcupados,
   Usuario,
 } from '@barbabrutal/core';
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
@@ -39,6 +40,18 @@ export class AgendamentoController {
     return casoDeUso.executar({
       profissional: +profissional,
       data: new Date(data),
+    });
+  }
+
+  @Get('ocupacao/:profissional/:data')
+  buscarOcupacaoPorProfissionalEData(
+    @Param('profissional') profissional: string,
+    @Param('data') dataParam: string,
+  ) {
+    const casoDeUso = new ObterHorariosOcupados(this.repo);
+    return casoDeUso.executar({
+      profissionalId: +profissional,
+      data: new Date(dataParam),
     });
   }
 

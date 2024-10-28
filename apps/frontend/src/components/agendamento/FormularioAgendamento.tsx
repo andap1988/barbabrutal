@@ -12,11 +12,13 @@ export default function FormularioAgendamento() {
         profissional,
         servicos,
         data,
-        selecionarData,
+        horariosOcupados,
         selecionarProfissional,
         selecionarServicos,
+        selecionarData,
         agendar,
         podeAgendar,
+        qtdeHorarios,
     } = useAgendamento()
 
     return (
@@ -24,7 +26,7 @@ export default function FormularioAgendamento() {
             <Passos
                 labels={[
                     "Selecione o Profissional",
-                    "Selecione o Serviço",
+                    "Selecione os Serviços",
                     "Escolha o Horário",
                 ]}
                 permiteProximoPasso={[
@@ -50,9 +52,10 @@ export default function FormularioAgendamento() {
                 <CampoDataHora
                     label="Data e Hora"
                     value={data}
-                    onChange={selecionarData}
+                    onChange={(d) => selecionarData(d!)}
+                    horariosOcupados={horariosOcupados}
                     className="input"
-                    apenasNoFuturo
+                    qtdeHorarios={qtdeHorarios()}
                 />
             </Passos>
             <Sumario />

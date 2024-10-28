@@ -7,9 +7,10 @@ export interface CampoDataHoraProps
         React.SelectHTMLAttributes<HTMLInputElement>,
         "value" | "onChange"
     > {
-    value: Date | null
     label?: string
-    apenasNoFuturo?: boolean
+    value: Date | null
+    qtdeHorarios: number
+    horariosOcupados: string[]
     onChange: (value: Date | null) => void
 }
 
@@ -25,8 +26,9 @@ export default function CampoDataHora(props: CampoDataHoraProps) {
             <CampoHorario
                 label="Horários Disponíveis"
                 value={data}
+                horariosOcupados={props.horariosOcupados}
                 onChange={props.onChange}
-                qtdeHorarios={4}
+                qtdeHorarios={props.qtdeHorarios}
             />
         </div>
     )
